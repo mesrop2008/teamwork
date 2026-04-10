@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Вход для руководителя</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 100px auto; max-width: 400px; }
+        input { width: 100%; padding: 8px; margin: 6px 0 14px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 3px; }
+        button { width: 100%; padding: 10px; background: #1976D2; color: white; border: none; cursor: pointer; font-size: 14px; border-radius: 3px; }
+        button:hover { background: #1565C0; }
+        .error { color: red; background: #fff3f3; padding: 8px; border-radius: 3px; margin-bottom: 10px; }
+        h2 { text-align: center; }
+        .back { display: block; text-align: center; margin-top: 16px; color: #666; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <h2>🔑 Вход для руководителя</h2>
+    {% if error %}
+    <p class="error">{{ error }}</p>
+    {% endif %}
+    <form method="POST">
+        {% csrf_token %}
+        <label>Логин:</label>
+        <input type="text" name="username" required autofocus>
+        <label>Пароль:</label>
+        <input type="password" name="password" required>
+        <button type="submit">Войти</button>
+    </form>
+    <a href="/" class="back">← Вернуться к графику</a>
+</body>
+</html>
