@@ -75,10 +75,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
-USE_I18N = True
-USE_TZ = True
+LANGUAGE_CODE = 'ru-ru'
+TIME_ZONE = 'Asia/Irkutsk'
+USE_TZ = False
 
 
 STATIC_URL = 'static/'

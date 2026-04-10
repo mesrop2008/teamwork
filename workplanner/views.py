@@ -11,7 +11,7 @@ def index(request):
     selected_employee_id = request.GET.get('employee')
 
     groups = Group.objects.filter(alliance_id=selected_alliance_id) if selected_alliance_id else Group.objects.none()
-    employees = Employee.objects.filter(group_id=selected_group_id) if selected_group_id else Employee.objects.none()
+    employees = Employee.objects.filter(group_id=selected_group_id) if selected_group_id else Group.objects.none()
 
     shifts = Shift.objects.none()
     selected_employee = None
@@ -25,6 +25,46 @@ def index(request):
 
     all_shifts = Shift.objects.select_related('employee__group__alliance').all()
 
+    # Генерация вариантов времени начала (с 06:30 с шагом 15 мин)
+    time_options = []
+    for h in range(6, 24):
+        for m in [0, 15, 30, 45]:
+            if h == 6 and m < 30:
+                continue
+            time_options.append(f"{h:02d}:{m:02d}")
+
+    # Считаем свод
+    summary = None
+    if all_shifts.exists():
+        day_names = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+        by_day = [0] * 7
+        before_11 = 0
+        after_19 = 0
+        total = all_shifts.count()
+
+        for s in all_shifts:
+            wd = s.date.weekday()  # 0=пн, 6=вс
+            by_day[wd] += 1
+            if s.start_time and s.start_time.hour < 11:
+                before_11 += 1
+            if s.end_time and s.end_time.hour >= 19:
+                after_19 += 1
+
+        summary = {
+            'by_day': [
+                {
+                    'name': day_names[i],
+                    'count': by_day[i],
+                    'percent': round(by_day[i] / total * 100, 2) if total else 0
+                }
+                for i in range(7)
+            ],
+            'before_11': before_11,
+            'before_11_pct': round(before_11 / total * 100, 2) if total else 0,
+            'after_19': after_19,
+            'after_19_pct': round(after_19 / total * 100, 2) if total else 0,
+        }
+
     context = {
         'alliances': alliances,
         'groups': groups,
@@ -36,6 +76,8 @@ def index(request):
         'selected_employee_id': int(selected_employee_id) if selected_employee_id else None,
         'dates': dates,
         'all_shifts': all_shifts,
+        'time_options': time_options,
+        'summary': summary,
     }
     return render(request, 'index.html', context)
 
@@ -45,7 +87,11 @@ def add_shift(request):
         employee_id = request.POST.get('employee')
         shift_date = request.POST.get('date')
         start_time = request.POST.get('start_time')
-        end_time = request.POST.get('end_time')
+        end_time = request.POST.get('end_time') or None
+
+        if start_time == 'day_off':
+            start_time = None
+            end_time = None
 
         Shift.objects.create(
             employee_id=employee_id,
@@ -53,25 +99,20 @@ def add_shift(request):
             start_time=start_time,
             end_time=end_time,
         )
+        employee = Employee.objects.get(id=employee_id)
+        return redirect(f'/?alliance={employee.group.alliance_id}&group={employee.group_id}&employee={employee_id}')
 
-    employee = Employee.objects.get(id=employee_id)
-    return redirect(f'/?alliance={employee.group.alliance_id}&group={employee.group_id}&employee={employee_id}')
+    return redirect('/')
 
+def confirm_shift(request, shift_id):
+    shift = get_object_or_404(Shift, id=shift_id)
+    employee = shift.employee
+    shift.is_confirmed = True
+    shift.save()
+    return redirect(f'/?alliance={employee.group.alliance_id}&group={employee.group_id}&employee={employee.id}')
 
 def delete_shift(request, shift_id):
     shift = get_object_or_404(Shift, id=shift_id)
     employee = shift.employee
     shift.delete()
     return redirect(f'/?alliance={employee.group.alliance_id}&group={employee.group_id}&employee={employee.id}')
-
-
-def get_groups(request):
-    alliance_id = request.GET.get('alliance_id')
-    groups = list(Group.objects.filter(alliance_id=alliance_id).values('id', 'name'))
-    return JsonResponse(groups, safe=False)
-
-
-def get_employees(request):
-    group_id = request.GET.get('group_id')
-    employees = list(Employee.objects.filter(group_id=group_id).values('id', 'full_name'))
-    return JsonResponse(employees, safe=False)

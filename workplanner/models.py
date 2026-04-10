@@ -29,8 +29,9 @@ class Employee(models.Model):
 class Shift(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='shifts')
     date = models.DateField()
-    start_time = models.TimeField()
-    end_time = models.TimeField()
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    is_confirmed = models.BooleanField(default=False) 
 
     class Meta:
         ordering = ['date', 'start_time']
